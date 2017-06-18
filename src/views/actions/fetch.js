@@ -7,7 +7,7 @@ const fetchImages = (dispatch) => {
         pending: true,
     });
 
-    axios.get('/images')
+    axios.get('/api/v1/images')
         .then((response)=>{
             dispatch({
                 type: `${actionType}_SUCCESS`,
