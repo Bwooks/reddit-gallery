@@ -11996,13 +11996,7 @@ var mapStateToProps = function mapStateToProps(state) {
     return _extends({}, state);
 };
 
-var mapDispatchToProps = function mapDispatchToProps(dispatch) {
-    return {
-        dispatch: dispatch
-    };
-};
-
-exports.default = (0, _reactRedux.connect)(mapStateToProps, mapDispatchToProps)(Main);
+exports.default = (0, _reactRedux.connect)(mapStateToProps)(Main);
 
 /***/ }),
 /* 106 */
@@ -12931,6 +12925,7 @@ exports.default = fetchImages;
 Object.defineProperty(exports, "__esModule", {
     value: true
 });
+exports.TILE_CLASS = undefined;
 
 var _react = __webpack_require__(17);
 
@@ -12938,13 +12933,16 @@ var _react2 = _interopRequireDefault(_react);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+var TILE_CLASS = exports.TILE_CLASS = "tileElem";
+
 var Tile = function Tile(_ref) {
-    var image = _ref.image;
+    var image = _ref.image,
+        tileNum = _ref.tileNum;
 
     return _react2.default.createElement(
-        'div',
-        null,
-        _react2.default.createElement('img', { src: image.url })
+        "div",
+        { id: TILE_CLASS + "_" + tileNum, className: TILE_CLASS },
+        _react2.default.createElement("img", { src: image.url })
     );
 };
 
@@ -12974,13 +12972,15 @@ function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { de
 var Tiles = function Tiles(_ref) {
     var images = _ref.images;
 
+    var tileNum = 0;
     return _react2.default.createElement(
         'div',
         null,
-        images.map(function (image, currentIndex) {
+        images.map(function (image) {
             var containsImage = /imgur/g.test(image.data.domain);
             if (containsImage) {
-                return _react2.default.createElement(_Tile2.default, { image: image.data, key: currentIndex });
+                tileNum++;
+                return _react2.default.createElement(_Tile2.default, { image: image.data, tileNum: tileNum, key: tileNum });
             }
         })
     );
