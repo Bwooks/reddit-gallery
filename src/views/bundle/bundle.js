@@ -12851,9 +12851,9 @@ var _Tiles = __webpack_require__(145);
 
 var _Tiles2 = _interopRequireDefault(_Tiles);
 
-var _fetch = __webpack_require__(143);
+var _fetchAction = __webpack_require__(143);
 
-var _fetch2 = _interopRequireDefault(_fetch);
+var _fetchAction2 = _interopRequireDefault(_fetchAction);
 
 var _reactRedux = __webpack_require__(65);
 
@@ -12871,18 +12871,65 @@ var Main = function (_React$Component) {
     function Main(props) {
         _classCallCheck(this, Main);
 
-        return _possibleConstructorReturn(this, (Main.__proto__ || Object.getPrototypeOf(Main)).call(this, props));
+        var _this = _possibleConstructorReturn(this, (Main.__proto__ || Object.getPrototypeOf(Main)).call(this, props));
+
+        _this.state = {
+            lastImageId: '',
+            redditType: ''
+        };
+        return _this;
     }
 
     _createClass(Main, [{
         key: 'componentWillMount',
         value: function componentWillMount() {
-            (0, _fetch2.default)(this.props.dispatch);
+            var dispatch = this.props.dispatch;
+            var _state = this.state,
+                lastImageId = _state.lastImageId,
+                redditType = _state.redditType;
+
+            (0, _fetchAction2.default)(dispatch, lastImageId, redditType);
+            window.addEventListener('scroll', this.onScrollBottom.bind(this));
+        }
+    }, {
+        key: 'onScrollBottom',
+        value: function onScrollBottom() {
+            var doc = event.target;
+            var scrollLeftToGo = doc.documentElement.offsetHeight - (window.pageYOffset + window.innerHeight);
+            if (Math.floor(scrollLeftToGo) === 0) {
+                var _state2 = this.state,
+                    lastImageId = _state2.lastImageId,
+                    redditType = _state2.redditType;
+
+                this.loadMoreImages(lastImageId, redditType);
+            }
+        }
+    }, {
+        key: 'loadMoreImages',
+        value: function loadMoreImages(lastImageId, redditType) {
+            var dispatch = this.props.dispatch;
+
+            (0, _fetchAction2.default)(dispatch, lastImageId, redditType);
+        }
+    }, {
+        key: 'getLastImageId',
+        value: function getLastImageId(lastImageId, redditType) {
+            this.setState({
+                lastImageId: lastImageId,
+                redditType: redditType
+            });
         }
     }, {
         key: 'render',
         value: function render() {
-            return !this.props.pending ? _react2.default.createElement(_Tiles2.default, { images: this.props.images }) : null;
+            var _props = this.props,
+                pending = _props.pending,
+                images = _props.images;
+
+            return !pending && images.length > 0 ? _react2.default.createElement(_Tiles2.default, { images: this.props.images,
+                getLastImageId: this.getLastImageId.bind(this),
+                lastImageId: this.state.lastImageId
+            }) : null;
         }
     }]);
 
@@ -14429,23 +14476,30 @@ var _axios2 = _interopRequireDefault(_axios);
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
 var actionType = 'FETCH_IMAGES';
-var fetchImages = function fetchImages(dispatch) {
+var fetchImages = function fetchImages(dispatch, lastImageId, redditType) {
     dispatch({
         type: actionType + '_PENDING',
-        pending: true
+        pending: true,
+        error: false,
+        payload: []
     });
-
-    _axios2.default.get('/images').then(function (response) {
+    _axios2.default.get('/api/v1/images', {
+        params: {
+            lastImageId: lastImageId,
+            redditType: redditType
+        } }).then(function (response) {
         dispatch({
             type: actionType + '_SUCCESS',
             payload: response.data,
-            pending: false
+            pending: false,
+            error: false
         });
     }).catch(function (error) {
         dispatch({
             type: actionType + '_FAIL',
             payload: error,
-            pending: false
+            pending: false,
+            error: true
         });
     });
 };
@@ -14510,11 +14564,13 @@ var _reactGridGallery2 = _interopRequireDefault(_reactGridGallery);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
-var Tiles = function Tiles(_ref) {
-    var images = _ref.images;
-
-    console.log(images);
-    var gridImages = images.map(function (image, currentIndex) {
+var REDDIT_TYPE = 't3_';
+var Tiles = function Tiles(props) {
+    var lastImageId = props.images[props.images.length - 1].data.id;
+    if (props.lastImageId !== lastImageId) {
+        props.getLastImageId(lastImageId, REDDIT_TYPE);
+    }
+    var gridImages = props.images.map(function (image, currentIndex) {
         var containsImage = /i\.imgur/g.test(image.data.domain);
         if (containsImage) {
             var width = image.data.preview.images[0].source.width;
@@ -14531,12 +14587,7 @@ var Tiles = function Tiles(_ref) {
     }).filter(function (image) {
         return image !== null ? true : false;
     });
-    console.log(gridImages);
-    return _react2.default.createElement(
-        'div',
-        null,
-        _react2.default.createElement(_reactGridGallery2.default, { images: gridImages, rowHeight: 500 })
-    );
+    return _react2.default.createElement(_reactGridGallery2.default, { images: gridImages, rowHeight: 500 });
 };
 exports.default = Tiles;
 
@@ -14585,9 +14636,12 @@ Object.defineProperty(exports, "__esModule", {
     value: true
 });
 
+var _extends = Object.assign || function (target) { for (var i = 1; i < arguments.length; i++) { var source = arguments[i]; for (var key in source) { if (Object.prototype.hasOwnProperty.call(source, key)) { target[key] = source[key]; } } } return target; };
+
 var initState = {
     images: [],
-    pending: false
+    pending: false,
+    error: false
 };
 
 var load = function load() {
@@ -14596,15 +14650,15 @@ var load = function load() {
 
     switch (action.type) {
         case 'FETCH_IMAGES_PENDING':
-            return {
-                images: state.images,
+            return _extends({}, state, {
                 pending: true
-            };
+            });
         case 'FETCH_IMAGES_SUCCESS':
-            return {
-                images: action.payload,
+            var images = state.images.slice(0).concat(action.payload);
+            return _extends({}, state, {
+                images: images,
                 pending: false
-            };
+            });
         default:
             return state;
     }

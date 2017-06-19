@@ -1,19 +1,22 @@
 
 const initState = {
     images: [],
-    pending: false
+    pending: false,
+    error: false,
 }
 
 const load = (state = initState, action) => {
     switch(action.type) {
         case 'FETCH_IMAGES_PENDING': 
             return {
-                images: state.images,
+                ...state,
                 pending: true,
             };
         case 'FETCH_IMAGES_SUCCESS': 
+            let images = state.images.slice(0).concat(action.payload);
             return {
-                images: action.payload,
+                ...state,
+                images,
                 pending: false,
             };
         default: 
